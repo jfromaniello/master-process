@@ -99,7 +99,7 @@ module.exports.init = function () {
         address.address[0] === '/' ||
         unix_sockets.indexOf(address.address) === -1) {
       unix_sockets.push(address.address);
-    // fs.chmodSync(address.address, '777');
+      fs.chmodSync(address.address, '664');
     }
   });
 
