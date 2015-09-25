@@ -1,7 +1,7 @@
 {
   "name": "master-process",
   "description": "Reload your application with no downtime.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "José F. Romaniello <jfromaniello@gmail.com> (http://joseoncode.com)",
   "repository": {
     "url": "git://github.com/jfromaniello/master-process.git"
