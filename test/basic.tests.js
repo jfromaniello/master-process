@@ -46,7 +46,10 @@ describe('master-process', function () {
       assert_status('0', function (err) {
         if (err) return done(err);
         proc.once('listening', function () {
-          assert_status('1', done);
+          //wait the other proc has been stopped
+          setTimeout(function () {
+            assert_status('1', done);
+          }, 100);
         }).kill('SIGHUP');
       });
     });
