@@ -1,0 +1,24 @@
+{
+  "name": "master-process",
+  "description": "Reload your application with no downtime.",
+  "version": "0.0.0",
+  "author": "José F. Romaniello <jfromaniello@gmail.com> (http://joseoncode.com)",
+  "repository": {
+    "url": "git://github.com/jfromaniello/master-process.git"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha"
+  },
+  "dependencies": {
+    "async": "~1.4.2",
+    "debug": "~2.2.0",
+    "keypress": "~0.2.1",
+    "lodash": "~3.10.1",
+    "usage": "~0.7.1"
+  },
+  "devDependencies": {
+    "chai": "~2.3.0",
+    "mocha": "~2.2.5"
+  }
+}
