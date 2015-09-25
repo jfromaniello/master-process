@@ -96,7 +96,7 @@ module.exports.init = function () {
   cluster.on('listening', function (worker, address) {
     debug('cluster is listening');
     if (address.address &&
-        address.address[0] === '/' ||
+        address.address[0] === '/' &&
         unix_sockets.indexOf(address.address) === -1) {
       unix_sockets.push(address.address);
       fs.chmodSync(address.address, '664');
