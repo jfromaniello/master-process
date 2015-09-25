@@ -2,6 +2,7 @@ var spawn   = require('child_process').spawn;
 var request = require('request');
 var assert  = require('chai').assert;
 var _       = require('lodash');
+
 var assert_status = function (status, done) {
   request.get('http://localhost:9898', function (err, res, body) {
     if (err) return done(err);
@@ -21,12 +22,23 @@ describe('master-process', function () {
         proc.emit('listening');
       }
     });
+
+    proc.once('exit', function () {
+      proc.status = 'closed';
+    });
   });
 
-  afterEach(function () {
+  afterEach(function (done) {
+    if (proc.status === 'closed') {
+      return done();
+    }
     try {
-      proc.kill('SIGKILL');
-    } catch(er) {}
+      proc.kill('SIGKILL').once('exit', function () {
+        done();
+      });
+    } catch(er) {
+      done();
+    }
   });
 
   it('should reload the worker on SIGHUP', function (done) {
