@@ -15,6 +15,7 @@
     "debug": "~2.2.0",
     "keypress": "~0.2.1",
     "lodash": "~3.10.1",
+    "ms": "~0.7.1",
     "usage": "~0.7.1"
   },
   "devDependencies": {
