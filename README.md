@@ -2,6 +2,8 @@ The purpose of this module is to reload a node.js application with no downtime b
 
 Read more [here](http://joseoncode.com/2015/01/18/reloading-node-with-no-downtime/).
 
+[![Build Status](https://travis-ci.org/jfromaniello/master-process.svg)](https://travis-ci.org/jfromaniello/master-process)
+
 ## Installation
 
 ```
