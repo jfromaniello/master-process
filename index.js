@@ -11,7 +11,7 @@ var cwd     = process.cwd();
 
 var DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
                         os.cpus().length :
-                        parseInt(process.env.WORKERS || 1);
+                        parseInt(process.env.WORKERS || 1) || 1;
 
 function getVersion () {
   var pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
