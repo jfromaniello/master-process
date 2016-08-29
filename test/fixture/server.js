@@ -20,7 +20,7 @@ var server = http.createServer(function(req, res) {
 
   if (req.url === '/hardcrash') {
     var root= [];
-    while(true) root.push(new Array(10000));
+    while(true) root.push(new Array(100000));
   }
 
   res.writeHead(200);
