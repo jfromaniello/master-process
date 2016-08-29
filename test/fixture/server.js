@@ -17,6 +17,12 @@ var server = http.createServer(function(req, res) {
   if (req.url === '/crash') {
     return process.exit(1);
   }
+
+  if (req.url === '/hardcrash') {
+    var root= [];
+    while(true) root.push(new Array(100000));
+  }
+
   res.writeHead(200);
   res.end(worker_index.toString());
 });
@@ -27,6 +33,7 @@ server.listen(9898, function (err) {
     return process.exit(1);
   }
   console.log('listening');
+  process.send({listening:true});
 });
 
 process.once('SIGTERM', function () {

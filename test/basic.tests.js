@@ -55,11 +55,20 @@ describe('master-process', function () {
     });
   });
 
-  it('should crash the master process when the worker crash', function (done) {
+  it('should exit the master process when the worker exits with code !== 0', function (done) {
     proc.once('listening', function () {
       request.get('http://localhost:9898/crash').on('error', _.noop);
     }).once('exit', function (code) {
       assert.equal(code, 1);
+      done();
+    });
+  });
+
+  it('should exit the master process when the worker crash', function (done) {
+    proc.once('listening', function () {
+      request.get('http://localhost:9898/hardcrash').on('error', _.noop);
+    }).once('exit', function (code, signal) {
+      assert.equal(code, 0);
       done();
     });
   });
