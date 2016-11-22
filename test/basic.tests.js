@@ -73,7 +73,7 @@ describe('master-process', function () {
     });
   });
 
-  it('should exit the master process when the worker crash', function (done) {
+  it.skip('should exit the master process when the worker crash', function (done) {
     proc.once('listening', function () {
       request.get('http://localhost:9898/hardcrash').on('error', _.noop);
     }).once('exit', function (code, signal) {
