@@ -101,6 +101,8 @@ module.exports.init = function () {
             fs.unlinkSync(socket);
           } catch(er){}
         });
+
+        process.exit(0);
       });
 
     }).on('SIGUSR2', function () {
