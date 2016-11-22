@@ -65,7 +65,7 @@ describe('master-process', function () {
   });
 
   it('should exit the master process on SIGTERM', function (done) {
-    proc.once('listening', () => {
+    proc.once('listening', function(){
       proc.kill('SIGTERM');
     }).once('exit', function (code) {
       assert.equal(code, 0);
@@ -73,7 +73,7 @@ describe('master-process', function () {
     });
   });
 
-  it.skip('should exit the master process when the worker crash', function (done) {
+  it('should exit the master process when the worker crash', function (done) {
     proc.once('listening', function () {
       request.get('http://localhost:9898/hardcrash').on('error', _.noop);
     }).once('exit', function (code, signal) {
