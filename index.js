@@ -40,8 +40,12 @@ function fork (reload_counter, callback) {
 
   debug('starting a new worker');
 
-  var reload_env = { RELOAD_WORKER: JSON.stringify({ reload_count: reload_counter }) };
-  var new_worker = cluster.fork(reload_counter > 0 ? reload_env : undefined);
+  const additionalEnvs = {
+    RELOAD_WORKER: reload_counter > 0 ? JSON.stringify({ reload_count: reload_counter }) : "",
+    PPID: process.pid
+  };
+
+  const new_worker = cluster.fork(additionalEnvs);
   new_worker._reload_counter = reload_counter;
 
   monitor(new_worker, debug, fork);
