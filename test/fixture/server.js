@@ -1,30 +1,30 @@
-var cluster = require('cluster');
+const cluster = require('cluster');
 
 if (cluster.isMaster) {
-  var mp = require('../../');
-  mp.init();
-  return;
+  const mp = require('../../');
+  return mp.init();
 }
 
-var http = require('http');
-var worker_index = 0;
+const http = require('http');
 
-if (process.env.RELOAD_WORKER) {
-  worker_index = JSON.parse(process.env.RELOAD_WORKER).reload_count;
-}
-
-var server = http.createServer(function(req, res) {
+const server = http.createServer(function(req, res) {
   if (req.url === '/crash') {
     return process.exit(1);
   }
 
   if (req.url === '/hardcrash') {
-    var root = [];
+    const root = [];
     while(true) root.push(new Array(100000));
   }
 
+  if (req.url === '/envs') {
+    res.setHeader('Content-Type', 'application/json');
+    res.writeHead(200);
+    return res.end(JSON.stringify(process.env));
+  }
+
   res.writeHead(200);
-  res.end(worker_index.toString());
+  res.end(process.env.RELOAD_INDEX);
 });
 
 server.listen(9898, function (err) {
@@ -33,7 +33,7 @@ server.listen(9898, function (err) {
     return process.exit(1);
   }
   console.log('listening');
-  process.send({listening:true});
+  process.send({ listening: true });
 });
 
 process.once('SIGTERM', function () {

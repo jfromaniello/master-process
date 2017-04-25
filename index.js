@@ -30,7 +30,7 @@ var version = getVersion();
  * @param  {integer}  reload_counter number of times this process has been reloaded.
  * @param  {Function} callback
  */
-function fork (reload_counter, callback) {
+function fork (worker_index, reload_counter, callback) {
   process.chdir(cwd);
 
   if (version !== getVersion()) {
@@ -41,12 +41,17 @@ function fork (reload_counter, callback) {
   debug('starting a new worker');
 
   const additionalEnvs = {
+    //backward compatibility, use RELOAD_INDEX
     RELOAD_WORKER: reload_counter > 0 ? JSON.stringify({ reload_count: reload_counter }) : "",
-    PPID: process.pid
+    //////////////////////////////////////////
+    PPID: process.pid,
+    RELOAD_INDEX: reload_counter,
+    WORKER_INDEX: worker_index
   };
 
   const new_worker = cluster.fork(additionalEnvs);
   new_worker._reload_counter = reload_counter;
+  new_worker._worker_index = worker_index;
 
   monitor(new_worker, debug, fork);
 
@@ -85,7 +90,7 @@ module.exports.init = function () {
     .on('SIGHUP', function () {
       reload_counter++;
       for (var i = 0; i < DESIRED_WORKERS; i++) {
-        fork(reload_counter);
+        fork(i, reload_counter);
       }
     })
     .on('SIGTERM', function () {
@@ -129,6 +134,6 @@ module.exports.init = function () {
   debug('forking %s workers', DESIRED_WORKERS);
 
   for (var i = 0; i < DESIRED_WORKERS; i++) {
-    fork(reload_counter);
+    fork(i, reload_counter);
   }
 };

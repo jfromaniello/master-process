@@ -33,6 +33,12 @@ The master process handles the special `SIGHUP` signal to create a new worker an
 
 Use this signal to tell the master process that you have updated the application and it should reload it.
 
+### Number of workers
+
+The number of workers can be controlled with the WORKERS environment variable. The default is `1`.
+
+`WORKERS=AUTO` sets the number of workers equals to the number of cores.
+
 ### Application Crashes
 
 The master-process does not handle application crashes and restarts. Once a worker crash the master process itself will crash, the service manager should take care of restarting the application.
@@ -59,6 +65,14 @@ If `process.env.PORT` starts with an `/` (slash) master-process will assume you 
 ## Debug
 
 Use `DEBUG=master-process` to debug this module.
+
+## Exposed env variables
+
+Every worker receives these additional environment variables:
+
+-  `PPID`: The parent process id.
+-  `RELOAD_INDEX`: The number of times that the process has been reload with the `SIGHUP` signal.
+-  `WORKER_INDEX`: The index of the worker, useful when using more than one worker with `WORKERS=AUTO` or `WORKERS=X`.
 
 ## Similar projects
 

@@ -1,15 +1,7 @@
-var spawn   = require('child_process').spawn;
-var request = require('request');
-var assert  = require('chai').assert;
-var _       = require('lodash');
-
-var assert_status = function (status, done) {
-  request.get('http://localhost:9898', function (err, res, body) {
-    if (err) return done(err);
-    assert.equal(body, status);
-    done();
-  });
-};
+const spawn   = require('child_process').spawn;
+const request = require('request');
+const assert  = require('chai').assert;
+const _       = require('lodash');
 
 describe('master-process', function () {
   var proc;
@@ -17,9 +9,13 @@ describe('master-process', function () {
   beforeEach(function () {
     proc = spawn(process.execPath, [__dirname + '/fixture/server.js']);
 
+    // //Useful to debug a test
+    // proc.stdout.pipe(process.stdout);
+    // proc.stderr.pipe(process.stderr);
+
     proc.stdout.on('data', function (data) {
       if (data.toString().indexOf('listening') > -1) {
-        proc.emit('listening');
+        setTimeout(() => proc.emit('listening'), 50);
       }
     });
 
@@ -33,25 +29,42 @@ describe('master-process', function () {
       return done();
     }
     try {
-      proc.kill('SIGKILL').once('exit', function () {
+      proc.once('exit', function () {
         done();
-      });
+      }).kill('SIGKILL');
     } catch(er) {
       done();
     }
   });
 
-  it('should reload the worker on SIGHUP', function (done) {
-    proc.once('listening', function () {
-      assert_status('0', function (err) {
-        if (err) return done(err);
-        proc.once('listening', function () {
-          //wait the other proc has been stopped
-          setTimeout(function () {
-            assert_status('1', done);
-          }, 100);
+  describe('when sending the SIGHUP signal', function() {
+    var envs;
+
+    beforeEach(function(done) {
+      proc.once('listening', function() {
+        proc.once('listening', function() {
+          request.get({
+            url: 'http://localhost:9898/envs',
+            json: true
+          }, (err, resp, body) => {
+            if (err) { return done(err); }
+            envs = body;
+            done();
+          });
         }).kill('SIGHUP');
       });
+    });
+
+    it('should contain env var RELOAD_INDEX', function() {
+      assert.equal(envs.RELOAD_INDEX, 1);
+    });
+
+    it('should contain env var WORKER_INDEX', function() {
+      assert.equal(envs.WORKER_INDEX, 0);
+    });
+
+    it('should contain env var PPID', function() {
+      assert.equal(envs.PPID, proc.pid);
     });
   });
 
