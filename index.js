@@ -94,8 +94,8 @@ module.exports.init = function () {
       }
     })
     .on('SIGTERM', function (code) {
-
-      debug('SIGTERM: stopping all workers');
+      console.log(code);
+      console.log('SIGTERM: stopping all' + Object.keys(cluster.workers).length + ' workers');
 
       async.each(_.values(cluster.workers), function (worker, callback) {
         worker.process
