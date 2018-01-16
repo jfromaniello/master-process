@@ -68,15 +68,6 @@ describe('master-process', function () {
     });
   });
 
-  it('should exit the master process when the worker exits with code !== 0', function (done) {
-    proc.once('listening', function () {
-      request.get('http://localhost:9898/crash').on('error', _.noop);
-    }).once('exit', function (code) {
-      assert.equal(code, 1);
-      done();
-    });
-  });
-
   it('should exit the master process on SIGTERM', function (done) {
     proc.once('listening', function(){
       proc.kill('SIGTERM');
@@ -86,13 +77,13 @@ describe('master-process', function () {
     });
   });
 
-  it('should exit the master process when the worker crash', function (done) {
+  it('should spin up a new worker when a worker crashes', function (done) {
     proc.once('listening', function () {
-      request.get('http://localhost:9898/hardcrash').on('error', _.noop);
-    }).once('exit', function (code, signal) {
-      assert.equal(code, 0);
-      done();
+      request.get('http://localhost:9898/crash').on('error', function() {
+        proc.once('listening', function() {
+          request.get('http://localhost:9898', done);
+        });
+      });
     });
   });
-
 });

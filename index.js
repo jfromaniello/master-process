@@ -10,8 +10,8 @@ var os      = require('os');
 var cwd     = process.cwd();
 
 var DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
-                        os.cpus().length :
-                        parseInt(process.env.WORKERS || 1) || 1;
+  os.cpus().length :
+  parseInt(process.env.WORKERS || 1) || 1;
 
 function getVersion () {
   var pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
@@ -59,14 +59,14 @@ function fork (worker_index, reload_counter, callback) {
     debug('PID/%s: worker is listening', new_worker.process.pid);
 
     _.values(cluster.workers)
-    .filter(function (worker) {
-      return worker._reload_counter !== reload_counter;
-    })
-    .forEach(function (old_worker) {
-      var old_proc = old_worker.process;
-      debug('PID/%s: killing old worker ', old_proc.pid);
-      old_proc.kill('SIGTERM');
-    });
+      .filter(function (worker) {
+        return worker._reload_counter !== reload_counter;
+      })
+      .forEach(function (old_worker) {
+        var old_proc = old_worker.process;
+        debug('PID/%s: killing old worker ', old_proc.pid);
+        old_proc.kill('SIGTERM');
+      });
 
     if (callback) {
       callback(new_worker);
@@ -84,6 +84,8 @@ module.exports.init = function () {
     fs.unlinkSync(process.env.PORT);
   }
 
+  var is_shutting_down = false;
+
   var unix_sockets = [];
 
   process
@@ -94,15 +96,16 @@ module.exports.init = function () {
       }
     })
     .on('SIGTERM', function (code) {
-      console.log(code);
-      console.log('SIGTERM: stopping all' + Object.keys(cluster.workers).length + ' workers');
+      is_shutting_down = true;
+
+      debug('SIGTERM: stopping all' + Object.keys(cluster.workers).length + ' workers');
 
       async.each(_.values(cluster.workers), function (worker, callback) {
         worker.process
-              .once('exit', function () {
-                callback();
-              })
-              .kill('SIGTERM');
+          .once('exit', function () {
+            callback();
+          })
+          .kill('SIGTERM');
       }, function () {
         unix_sockets.forEach(function (socket) {
           debug('SIGTERM: cleaning socket ' + socket);
@@ -121,19 +124,26 @@ module.exports.init = function () {
       });
     });
 
-  cluster.once('listening', function (worker, address) {
-    debug('cluster is listening on %s', address.port || address.fd);
-    if (address.address &&
+    cluster.once('listening', function (worker, address) {
+      debug('cluster is listening on %s', address.port || address.fd);
+      if (address.address &&
         address.address[0] === '/' &&
         unix_sockets.indexOf(address.address) === -1) {
-      unix_sockets.push(address.address);
-      fs.chmodSync(address.address, '664');
+        unix_sockets.push(address.address);
+        fs.chmodSync(address.address, '664');
+      }
+    });
+
+    cluster.on('exit', function(worker) {
+      // only spin up if running with less than required and MP isnt going to shut down
+      if (Object.keys(cluster.workers).length < DESIRED_WORKERS && !is_shutting_down) {
+        fork(worker._worker_index, reload_counter);
+      }
+    });
+
+    debug('forking %s workers', DESIRED_WORKERS);
+
+    for (var i = 0; i < DESIRED_WORKERS; i++) {
+      fork(i, reload_counter);
     }
-  });
-
-  debug('forking %s workers', DESIRED_WORKERS);
-
-  for (var i = 0; i < DESIRED_WORKERS; i++) {
-    fork(i, reload_counter);
-  }
 };
