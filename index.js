@@ -93,7 +93,7 @@ module.exports.init = function () {
         fork(i, reload_counter);
       }
     })
-    .on('SIGTERM', function () {
+    .on('SIGTERM', function (code) {
 
       debug('SIGTERM: stopping all workers');
 
@@ -111,7 +111,7 @@ module.exports.init = function () {
           } catch(er){}
         });
 
-        process.exit(0);
+        process.exit(code);
       });
 
     }).on('SIGUSR2', function () {
