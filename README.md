@@ -15,9 +15,14 @@ npm i master-process --save
 Use this code at the very beginning of your node.js application:
 
 ```js
-if (cluster.isMaster && 					//if is a master
-    typeof v8debug !== 'object' &&			//not in debug mode
-    process.env.NODE_ENV !== 'test') {      //not in test mode
+const isDebugMode = () => {
+  return typeof v8debug === 'object'
+    || /--debug|--inspect/.test(process.execArgv.join(' '));
+};
+
+if (cluster.isMaster &&                      //if is a master
+    !isDebugMode() &&                        //not in debug mode
+    process.env.NODE_ENV !== 'test') {       //not in test mode
 
   var mp = require('master-process');
   mp.init();
