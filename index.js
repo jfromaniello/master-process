@@ -40,9 +40,6 @@ function fork (worker_index, reload_counter, callback) {
   debug('starting a new worker');
 
   const additionalEnvs = {
-    //backward compatibility, use RELOAD_INDEX
-    RELOAD_WORKER: reload_counter > 0 ? JSON.stringify({ reload_count: reload_counter }) : "",
-    //////////////////////////////////////////
     PPID: process.pid,
     RELOAD_INDEX: reload_counter,
     WORKER_INDEX: worker_index
