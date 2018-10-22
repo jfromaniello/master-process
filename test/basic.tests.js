@@ -1,7 +1,6 @@
 const spawn   = require('child_process').spawn;
 const request = require('request');
 const assert  = require('chai').assert;
-const _       = require('lodash');
 
 describe('master-process', function () {
   this.timeout(10000);
@@ -71,7 +70,7 @@ describe('master-process', function () {
 
   it('should exit the master process when the worker exits with code !== 0', function (done) {
     proc.once('listening', function () {
-      request.get('http://localhost:9898/crash').on('error', _.noop);
+      request.get('http://localhost:9898/crash').on('error', () => {});
     }).once('exit', function (code) {
       assert.equal(code, 1);
       done();
@@ -89,7 +88,7 @@ describe('master-process', function () {
 
   it('should exit the master process when the worker crash', function (done) {
     proc.once('listening', function () {
-      request.get('http://localhost:9898/hardcrash').on('error', _.noop);
+      request.get('http://localhost:9898/hardcrash').on('error', () => {});
     }).once('exit', function (code, signal) {
       assert.equal(code, 0);
       done();

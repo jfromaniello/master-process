@@ -2,7 +2,6 @@ var cluster = require('cluster');
 var path    = require('path');
 var fs      = require('fs');
 var async   = require('async');
-var _       = require('lodash');
 var monitor = require('./lib/monitor');
 var debug   = require('debug')('master-process');
 var os      = require('os');
@@ -58,7 +57,7 @@ function fork (worker_index, reload_counter, callback) {
   new_worker.once('listening', function () {
     debug('PID/%s: worker is listening', new_worker.process.pid);
 
-    _.values(cluster.workers)
+    values(cluster.workers)
     .filter(function (worker) {
       return worker._reload_counter !== reload_counter;
     })
@@ -97,7 +96,7 @@ module.exports.init = function () {
 
       debug('SIGTERM: stopping all workers');
 
-      async.each(_.values(cluster.workers), function (worker, callback) {
+      async.each(values(cluster.workers), function (worker, callback) {
         worker.process
               .once('exit', function () {
                 callback();
@@ -116,7 +115,7 @@ module.exports.init = function () {
 
     }).on('SIGUSR2', function () {
       debug('SIGUSR2: sending the signal to all workers');
-      _.values(cluster.workers).forEach(function (worker) {
+      values(cluster.workers).forEach(function (worker) {
         worker.kill('SIGUSR2');
       });
     });
@@ -137,3 +136,8 @@ module.exports.init = function () {
     fork(i, reload_counter);
   }
 };
+
+function values(entries) {
+  return Object.keys(entries)
+    .reduce((values, key) => values.concat(entries[key]), []);
+}

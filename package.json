@@ -14,15 +14,13 @@
   "dependencies": {
     "async": "~1.4.2",
     "bytes": "^2.2.0",
-    "debug": "~2.2.0",
-    "keypress": "~0.2.1",
-    "lodash": "~3.10.1",
+    "debug": "^3.2.6",
     "ms": "~0.7.1",
     "usage": "~0.7.1"
   },
   "devDependencies": {
     "chai": "~2.3.0",
-    "mocha": "~2.2.5",
-    "request": "~2.64.0"
+    "mocha": "^5.2.0",
+    "request": "^2.88.0"
   }
 }
