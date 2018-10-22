@@ -4,7 +4,7 @@ const assert  = require('chai').assert;
 
 describe('master-process', function () {
   this.timeout(10000);
-  var proc;
+  let proc;
 
   beforeEach(function () {
     proc = spawn(process.execPath, [__dirname + '/fixture/server.js']);
@@ -38,7 +38,7 @@ describe('master-process', function () {
   });
 
   describe('when sending the SIGHUP signal', function() {
-    var envs;
+    let envs;
 
     beforeEach(function(done) {
       proc.once('listening', function() {

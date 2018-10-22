@@ -1,23 +1,23 @@
-var cluster = require('cluster');
-var path    = require('path');
-var fs      = require('fs');
-var async   = require('async');
-var monitor = require('./lib/monitor');
-var debug   = require('debug')('master-process');
-var os      = require('os');
+const cluster = require('cluster');
+const path    = require('path');
+const fs      = require('fs');
+const async   = require('async');
+const monitor = require('./lib/monitor');
+const debug   = require('debug')('master-process');
+const os      = require('os');
 
-var cwd     = process.cwd();
+const cwd     = process.cwd();
 
-var DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
-                        os.cpus().length :
-                        parseInt(process.env.WORKERS || 1) || 1;
+const DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
+                          os.cpus().length :
+                          parseInt(process.env.WORKERS || 1) || 1;
 
 function getVersion () {
-  var pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
+  const pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
   return JSON.parse(pkg).version;
 }
 
-var version = getVersion();
+const version = getVersion();
 
 /**
  * Fork a new worker.
@@ -26,8 +26,9 @@ var version = getVersion();
  * and once is listening it will kill all the other workers
  * with different reload index.
  *
- * @param  {integer}  reload_counter number of times this process has been reloaded.
- * @param  {Function} callback
+ * @param  {number}  worker_index the worker index (range: `0<=worker_index<DESIRED_WORKERS`)
+ * @param  {number}  reload_counter number of times this process has been reloaded.
+ * @param  {function(Worker)} [callback] called once the new worker is listening
  */
 function fork (worker_index, reload_counter, callback) {
   process.chdir(cwd);
@@ -59,7 +60,7 @@ function fork (worker_index, reload_counter, callback) {
       return worker._reload_counter !== reload_counter;
     })
     .forEach(function (old_worker) {
-      var old_proc = old_worker.process;
+      const old_proc = old_worker.process;
       debug('PID/%s: killing old worker ', old_proc.pid);
       old_proc.kill('SIGTERM');
     });
@@ -74,18 +75,18 @@ function fork (worker_index, reload_counter, callback) {
 
 module.exports.init = function () {
   debug('starting master-process with pid ' + process.pid);
-  var reload_counter = 0;
+  let reload_counter = 0;
 
   if (process.env.PORT && process.env.PORT[0] === '/' && fs.existsSync(process.env.PORT)) {
     fs.unlinkSync(process.env.PORT);
   }
 
-  var unix_sockets = [];
+  const unix_sockets = [];
 
   process
     .on('SIGHUP', function () {
       reload_counter++;
-      for (var i = 0; i < DESIRED_WORKERS; i++) {
+      for (let i = 0; i < DESIRED_WORKERS; i++) {
         fork(i, reload_counter);
       }
     })
@@ -129,7 +130,7 @@ module.exports.init = function () {
 
   debug('forking %s workers', DESIRED_WORKERS);
 
-  for (var i = 0; i < DESIRED_WORKERS; i++) {
+  for (let i = 0; i < DESIRED_WORKERS; i++) {
     fork(i, reload_counter);
   }
 };
