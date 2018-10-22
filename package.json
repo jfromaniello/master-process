@@ -9,7 +9,7 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "test": "mocha --timeout 10000"
+    "test": "mocha"
   },
   "dependencies": {
     "async": "~1.4.2",

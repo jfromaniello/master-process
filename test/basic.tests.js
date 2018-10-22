@@ -4,6 +4,7 @@ const assert  = require('chai').assert;
 const _       = require('lodash');
 
 describe('master-process', function () {
+  this.timeout(10000);
   var proc;
 
   beforeEach(function () {
