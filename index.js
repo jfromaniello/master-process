@@ -75,7 +75,7 @@ function fork (worker_index, reload_counter, callback) {
 }
 
 module.exports.init = function () {
-  debug('starting master-process with pid ' + process.pid);
+  debug('starting master-process %s with pid %s', version, process.pid);
   var reload_counter = 0;
 
   if (process.env.PORT && process.env.PORT[0] === '/' && fs.existsSync(process.env.PORT)) {
