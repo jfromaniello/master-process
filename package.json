@@ -12,14 +12,14 @@
     "test": "mocha"
   },
   "dependencies": {
-    "async": "~1.4.2",
-    "bytes": "^2.2.0",
+    "async": "^1.5.2",
+    "bytes": "^3.0.0",
     "debug": "^3.2.6",
-    "ms": "~0.7.1",
+    "ms": "^2.1.1",
     "usage": "~0.7.1"
   },
   "devDependencies": {
-    "chai": "~2.3.0",
+    "chai": "^4.2.0",
     "mocha": "^5.2.0",
     "request": "^2.88.0"
   }
