@@ -14,13 +14,16 @@ const server = http.createServer(function(req, res) {
 
   if (req.url === '/hardcrash') {
     const root = [];
-    while(true) root.push(new Array(100000));
+    while (true) root.push(new Array(100000));
   }
 
-  if (req.url === '/envs') {
+  if (req.url === '/process') {
     res.setHeader('Content-Type', 'application/json');
     res.writeHead(200);
-    return res.end(JSON.stringify(process.env));
+    return res.end(JSON.stringify({
+      pid: process.pid,
+      env: process.env,
+    }));
   }
 
   res.writeHead(200);
