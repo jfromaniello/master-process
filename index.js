@@ -9,10 +9,6 @@ var os      = require('os');
 
 var cwd     = process.cwd();
 
-var DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
-                        os.cpus().length :
-                        parseInt(process.env.WORKERS || 1) || 1;
-
 function getVersion () {
   var pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
   return JSON.parse(pkg).version;
@@ -20,6 +16,9 @@ function getVersion () {
 
 var version = getVersion();
 
+var desiredWorkers = 1;
+
+var env = process.env;
 /**
  * Fork a new worker.
  *
@@ -53,7 +52,7 @@ function fork (worker_index, reload_counter, callback) {
   new_worker._reload_counter = reload_counter;
   new_worker._worker_index = worker_index;
 
-  monitor(new_worker, debug, fork);
+  monitor(new_worker, debug, fork, env);
 
   new_worker.once('listening', function () {
     debug('PID/%s: worker is listening', new_worker.process.pid);
@@ -76,12 +75,18 @@ function fork (worker_index, reload_counter, callback) {
   return new_worker;
 }
 
-module.exports.init = function () {
+module.exports.init = function (envVars) {
+  if (envVars) env = envVars;
+  
+  desiredWorkers = env.WORKERS === 'AUTO' ?
+                      os.cpus().length :
+                      parseInt(env.WORKERS || desiredWorkers) || desiredWorkers;
+
   debug('starting master-process with pid ' + process.pid);
   var reload_counter = 0;
 
-  if (process.env.PORT && process.env.PORT[0] === '/' && fs.existsSync(process.env.PORT)) {
-    fs.unlinkSync(process.env.PORT);
+  if (env.PORT && env.PORT[0] === '/' && fs.existsSync(env.PORT)) {
+    fs.unlinkSync(env.PORT);
   }
 
   var unix_sockets = [];
@@ -89,7 +94,7 @@ module.exports.init = function () {
   process
     .on('SIGHUP', function () {
       reload_counter++;
-      for (var i = 0; i < DESIRED_WORKERS; i++) {
+      for (var i = 0; i < desiredWorkers; i++) {
         fork(i, reload_counter);
       }
     })
@@ -131,9 +136,9 @@ module.exports.init = function () {
     }
   });
 
-  debug('forking %s workers', DESIRED_WORKERS);
+  debug('forking %s workers', desiredWorkers);
 
-  for (var i = 0; i < DESIRED_WORKERS; i++) {
+  for (var i = 0; i < desiredWorkers; i++) {
     fork(i, reload_counter);
   }
 };
