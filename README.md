@@ -56,7 +56,7 @@ The number of workers can be controlled with the WORKERS environment variable. T
 
 ### Application Crashes
 
-The master-process does not handle application crashes and restarts. Once a worker crashes the master process itself will crash, the service manager should take care of restarting the application.
+If a worker exits unexpectedly, master-process will attempt to replace it with a new worker.
 
 ### Updating master-process
 

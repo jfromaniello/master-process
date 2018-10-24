@@ -63,7 +63,7 @@ function fork (worker_index, reload_counter, callback) {
     .forEach(function (old_worker) {
       var old_proc = old_worker.process;
       debug('PID/%s: killing old worker ', old_proc.pid);
-      old_proc.kill('SIGTERM');
+      old_worker.kill('SIGTERM');
     });
 
     if (callback) {
@@ -96,11 +96,8 @@ module.exports.init = function () {
       debug('SIGTERM: stopping all workers');
 
       async.each(_.values(cluster.workers), function (worker, callback) {
-        worker.process
-              .once('exit', function () {
-                callback();
-              })
-              .kill('SIGTERM');
+        worker.process.once('exit', callback);
+        worker.kill('SIGTERM');
       }, function () {
         unix_sockets.forEach(function (socket) {
           debug('SIGTERM: cleaning socket ' + socket);
@@ -126,6 +123,23 @@ module.exports.init = function () {
         unix_sockets.indexOf(address.address) === -1) {
       unix_sockets.push(address.address);
       fs.chmodSync(address.address, '664');
+    }
+  }).on('exit', function (worker, code, signal) {
+    const pid = worker.process.pid;
+
+    if (worker.exitedAfterDisconnect) {
+      // master-process will use Worker.kill to gracefully kill a worker,
+      // which causes worker.exitedAfterDisconnect to be set (since Node v6).
+      //
+      // this is used here to distinguish expected/unexpected worker deaths.
+      if (code === 0) {
+        debug('PID/%s: disconnected worker has exited', pid);
+      } else {
+        debug('PID/%s: disconnected worker has crashed: %o', pid, { code, signal });
+      }
+    } else {
+      debug('PID/%s: worker has crashed (code=%s, signal=%s)', pid, code, signal);
+      fork(worker._worker_index, reload_counter);
     }
   });
 

@@ -7,9 +7,25 @@ if (cluster.isMaster) {
 
 const http = require('http');
 
-const server = http.createServer(function(req, res) {
+const server = http.createServer(function (req, res) {
+  if (req.url === '/exit') {
+    console.log('exiting...');
+    return process.exit(0);
+  }
+
   if (req.url === '/crash') {
+    console.error('crashing...');
     return process.exit(1);
+  }
+
+  if (req.url === '/sigterm') {
+    console.error('sending SIGTERM to self');
+    return process.kill(process.pid, 'SIGTERM');
+  }
+
+  if (req.url === '/sigkill') {
+    console.error('sending SIGKILL to self');
+    return process.kill(process.pid, 'SIGKILL');
   }
 
   if (req.url === '/hardcrash') {
