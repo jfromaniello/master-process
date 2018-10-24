@@ -33,19 +33,15 @@ describe('cluster exit', function () {
       ['due to a SIGKILL', 'http://localhost:9898/sigkill'],
     ].forEach(([desc, crashURL]) => {
 
-      const getWorkerProcess = cb => request.get({
-        url: 'http://localhost:9898/process',
-        json: true
-      }, (err, resp, body) => cb(err, body));
       const crashWorker = cb => request.get(crashURL, () => cb(null));
 
       describe(desc, function () {
         it('should be replaced with a new worker', function (done) {
           async.series([
-            getWorkerProcess,
+            test_server.getWorkerProcess,
             crashWorker,
             cb => test_server.awaitWorkerOnline(proc, cb),
-            getWorkerProcess,
+            test_server.getWorkerProcess,
           ], (err, results) => {
             if (err) {
               return done(err);
@@ -59,6 +55,26 @@ describe('cluster exit', function () {
         });
       });
 
+    });
+
+    it('should be replaced at the rate specified by RESTART_DELAY', function (done) {
+      const restartDelay = 1000;
+      const testStartedAt = Date.now();
+
+      async.series([
+        test_server.getWorkerProcess,
+        cb => request.get('http://localhost:9898/exit', () => cb(null)),
+        cb => test_server.awaitWorkerOnline(proc, err => cb(err, Date.now())),
+        cb => request.get('http://localhost:9898/crash', () => cb(null)),
+        cb => test_server.awaitWorkerOnline(proc, err => cb(err, Date.now())),
+      ], (err, results) => {
+        const worker1_startedAt = results[2];
+        const worker2_startedAt = results[4];
+
+        assert.closeTo(worker1_startedAt, testStartedAt + restartDelay, 100, `+${worker1_startedAt - testStartedAt}ms delay on worker1`);
+        assert.closeTo(worker2_startedAt, worker1_startedAt + restartDelay, 100, `+${worker2_startedAt - worker1_startedAt}ms delay on worker2`);
+        done();
+      });
     });
   });
 

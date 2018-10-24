@@ -1,4 +1,3 @@
-const request = require('request');
 const assert  = require('chai').assert;
 const test_server = require('./fixture/test_server');
 
@@ -19,10 +18,7 @@ describe('cluster reload', function () {
 
     beforeEach(function(done) {
       test_server.awaitWorkerOnline(proc, () => {
-        request.get({
-          url: 'http://localhost:9898/process',
-          json: true
-        }, (err, resp, body) => {
+        test_server.getWorkerProcess((err, body) => {
           if (err) { return done(err); }
           envs = body.env;
           done();

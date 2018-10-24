@@ -6,12 +6,15 @@ var _       = require('./lib/fakedash');
 var monitor = require('./lib/monitor');
 var debug   = require('debug')('master-process');
 var os      = require('os');
+const ms    = require('ms');
 
 var cwd     = process.cwd();
 
 var DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
                         os.cpus().length :
                         parseInt(process.env.WORKERS || 1) || 1;
+
+const RESTART_DELAY = typeof process.env.RESTART_DELAY === 'string' ? ms(process.env.RESTART_DELAY) : ms('1s');
 
 function getVersion () {
   var pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
@@ -50,6 +53,7 @@ function fork (worker_index, reload_counter, callback) {
   const new_worker = cluster.fork(additionalEnvs);
   new_worker._reload_counter = reload_counter;
   new_worker._worker_index = worker_index;
+  new_worker._worker_started = Date.now();
 
   monitor(new_worker, debug, fork);
 
@@ -75,7 +79,7 @@ function fork (worker_index, reload_counter, callback) {
 }
 
 module.exports.init = function () {
-  debug('starting master-process %s with pid %s', version, process.pid);
+  debug('starting master-process %s with pid %s and config: %o', version, process.pid, { DESIRED_WORKERS, RESTART_DELAY });
   var reload_counter = 0;
 
   if (process.env.PORT && process.env.PORT[0] === '/' && fs.existsSync(process.env.PORT)) {
@@ -138,8 +142,13 @@ module.exports.init = function () {
         debug('PID/%s: disconnected worker has crashed: %o', pid, { code, signal });
       }
     } else {
-      debug('PID/%s: worker has crashed (code=%s, signal=%s)', pid, code, signal);
-      fork(worker._worker_index, reload_counter);
+      const uptime = Date.now() - worker._worker_started;
+      const restartDelay = Math.max(0, RESTART_DELAY - uptime);
+
+      debug('PID/%s: worker has crashed: %o', pid, { code, signal, uptime, restartDelay });
+      setTimeout(() => {
+        fork(worker._worker_index, reload_counter);
+      }, restartDelay);
     }
   });
 

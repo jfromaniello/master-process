@@ -1,9 +1,10 @@
 const spawn = require('child_process').spawn;
+const request = require('request');
 
 /**
  * Creates a new master-process cluster for use in tests.
  *
- * @param {function} [cb] invoked once the cluster is online
+ * @param {function} cb invoked once the cluster is online
  * @return {ChildProcess} the master process of the cluster
  */
 function createCluster(cb) {
@@ -23,10 +24,7 @@ function createCluster(cb) {
     proc.status = 'closed';
   });
 
-  if (cb) {
-    awaitWorkerOnline(proc, cb);
-  }
-
+  awaitWorkerOnline(proc, cb);
   return proc;
 }
 
@@ -60,8 +58,22 @@ function awaitWorkerOnline(proc, cb) {
   });
 }
 
+/**
+ * Gets info about the worker process.
+ *
+ * @param {function} cb
+ * @return {{pid: number, env: object}}
+ */
+function getWorkerProcess(cb) {
+  request.get({
+    url: 'http://localhost:9898/process',
+    json: true
+  }, (err, resp, body) => cb(err, body));
+}
+
 module.exports = {
   createCluster,
   destroyCluster,
   awaitWorkerOnline,
+  getWorkerProcess,
 };
