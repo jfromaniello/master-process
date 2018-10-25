@@ -1,23 +1,24 @@
-const cluster = require('cluster');
-const path    = require('path');
-const fs      = require('fs');
-const async   = require('async');
-const monitor = require('./lib/monitor');
-const debug   = require('debug')('master-process');
-const os      = require('os');
+var cluster = require('cluster');
+var path    = require('path');
+var fs      = require('fs');
+var async   = require('async');
+var _       = require('./lib/fakedash');
+var monitor = require('./lib/monitor');
+var debug   = require('debug')('master-process');
+var os      = require('os');
 
-const cwd     = process.cwd();
+var cwd     = process.cwd();
 
-const DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
-                          os.cpus().length :
-                          parseInt(process.env.WORKERS || 1) || 1;
+var DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
+                        os.cpus().length :
+                        parseInt(process.env.WORKERS || 1) || 1;
 
 function getVersion () {
-  const pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
+  var pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
   return JSON.parse(pkg).version;
 }
 
-const version = getVersion();
+var version = getVersion();
 
 /**
  * Fork a new worker.
@@ -55,12 +56,12 @@ function fork (worker_index, reload_counter, callback) {
   new_worker.once('listening', function () {
     debug('PID/%s: worker is listening', new_worker.process.pid);
 
-    values(cluster.workers)
+    _.values(cluster.workers)
     .filter(function (worker) {
       return worker._reload_counter !== reload_counter;
     })
     .forEach(function (old_worker) {
-      const old_proc = old_worker.process;
+      var old_proc = old_worker.process;
       debug('PID/%s: killing old worker ', old_proc.pid);
       old_proc.kill('SIGTERM');
     });
@@ -75,18 +76,18 @@ function fork (worker_index, reload_counter, callback) {
 
 module.exports.init = function () {
   debug('starting master-process with pid ' + process.pid);
-  let reload_counter = 0;
+  var reload_counter = 0;
 
   if (process.env.PORT && process.env.PORT[0] === '/' && fs.existsSync(process.env.PORT)) {
     fs.unlinkSync(process.env.PORT);
   }
 
-  const unix_sockets = [];
+  var unix_sockets = [];
 
   process
     .on('SIGHUP', function () {
       reload_counter++;
-      for (let i = 0; i < DESIRED_WORKERS; i++) {
+      for (var i = 0; i < DESIRED_WORKERS; i++) {
         fork(i, reload_counter);
       }
     })
@@ -94,7 +95,7 @@ module.exports.init = function () {
 
       debug('SIGTERM: stopping all workers');
 
-      async.each(values(cluster.workers), function (worker, callback) {
+      async.each(_.values(cluster.workers), function (worker, callback) {
         worker.process
               .once('exit', function () {
                 callback();
@@ -113,7 +114,7 @@ module.exports.init = function () {
 
     }).on('SIGUSR2', function () {
       debug('SIGUSR2: sending the signal to all workers');
-      values(cluster.workers).forEach(function (worker) {
+      _.values(cluster.workers).forEach(function (worker) {
         worker.kill('SIGUSR2');
       });
     });
@@ -130,12 +131,7 @@ module.exports.init = function () {
 
   debug('forking %s workers', DESIRED_WORKERS);
 
-  for (let i = 0; i < DESIRED_WORKERS; i++) {
+  for (var i = 0; i < DESIRED_WORKERS; i++) {
     fork(i, reload_counter);
   }
 };
-
-function values(entries) {
-  return Object.keys(entries)
-    .reduce((values, key) => values.concat(entries[key]), []);
-}
