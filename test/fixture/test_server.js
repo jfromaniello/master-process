@@ -15,8 +15,13 @@ function createCluster(cb) {
   // proc.stderr.pipe(process.stderr);
 
   proc.stdout.on('data', function (data) {
-    if (data.toString().indexOf('listening') > -1) {
-      setTimeout(() => proc.emit('listening'), 50);
+    const marker = 'event:>>';
+    const text = data.toString();
+
+    if (text.indexOf(marker) === 0) {
+      const json = text.substr(marker.length);
+      const { name, payload } = JSON.parse(json);
+      setTimeout(() => proc.emit(name, payload), 50);
     }
   });
 
@@ -24,7 +29,7 @@ function createCluster(cb) {
     proc.status = 'closed';
   });
 
-  awaitWorkerOnline(proc, cb);
+  onWorkerListening(proc, worker => cb(null, worker));
   return proc;
 }
 
@@ -46,16 +51,14 @@ function destroyCluster(proc, done) {
 }
 
 /**
- * Waits until the specified number of workers has come online.
+ * Registers a callback to run once a worker starts listening.
  *
  * @param {ChildProcess} proc the master process
- * @param {function} cb the callback to invoke once
+ * @param {function({pid: number})} cb the callback to invoke once
  * @return {ChildProcess} proc
  */
-function awaitWorkerOnline(proc, cb) {
-  return proc.once('listening', () => {
-    cb(null);
-  });
+function onWorkerListening(proc, cb) {
+  return proc.once('listening', worker => cb(worker));
 }
 
 /**
@@ -64,7 +67,7 @@ function awaitWorkerOnline(proc, cb) {
  * @param {function} cb
  * @return {{pid: number, env: object}}
  */
-function getWorkerProcess(cb) {
+function getWorkerProcessEnv(cb) {
   request.get({
     url: 'http://localhost:9898/process',
     json: true
@@ -74,6 +77,6 @@ function getWorkerProcess(cb) {
 module.exports = {
   createCluster,
   destroyCluster,
-  awaitWorkerOnline,
-  getWorkerProcess,
+  onWorkerListening,
+  getWorkerProcessEnv,
 };

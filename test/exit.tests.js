@@ -6,9 +6,13 @@ const test_server = require('./fixture/test_server');
 describe('cluster exit', function () {
   this.timeout(10000);
   let proc;
+  let worker_pid;
 
   beforeEach(function (done) {
-    proc = test_server.createCluster(done);
+    proc = test_server.createCluster((err, worker) => {
+      worker_pid = worker.pid;
+      done(err);
+    });
   });
 
   afterEach(function (done) {
@@ -22,6 +26,12 @@ describe('cluster exit', function () {
         assert.equal(code, 0);
         done();
       });
+    });
+
+    it('should allow workers to clean up before killing', function (done) {
+      proc.once('clean_up', () => {
+        done();
+      }).kill('SIGTERM');
     });
   });
 
@@ -38,18 +48,15 @@ describe('cluster exit', function () {
       describe(desc, function () {
         it('should be replaced with a new worker', function (done) {
           async.series([
-            test_server.getWorkerProcess,
             crashWorker,
-            cb => test_server.awaitWorkerOnline(proc, cb),
-            test_server.getWorkerProcess,
-          ], (err, results) => {
+            cb => test_server.onWorkerListening(proc, worker => cb(null, worker.pid)),
+          ], (err, [, new_worker_pid]) => {
             if (err) {
               return done(err);
             }
 
-            const worker_resp = results[0];
-            const new_worker_resp = results[3];
-            assert.notEqual(new_worker_resp.pid, worker_resp.pid, 'request should be serviced by new pid');
+            assert.isNumber(new_worker_pid);
+            assert.notEqual(new_worker_pid, worker_pid, 'request should be serviced by new pid');
             done();
           });
         });
@@ -62,15 +69,11 @@ describe('cluster exit', function () {
       const testStartedAt = Date.now();
 
       async.series([
-        test_server.getWorkerProcess,
         cb => request.get('http://localhost:9898/exit', () => cb(null)),
-        cb => test_server.awaitWorkerOnline(proc, err => cb(err, Date.now())),
+        cb => test_server.onWorkerListening(proc, () => cb(null, Date.now())),
         cb => request.get('http://localhost:9898/crash', () => cb(null)),
-        cb => test_server.awaitWorkerOnline(proc, err => cb(err, Date.now())),
-      ], (err, results) => {
-        const worker1_startedAt = results[2];
-        const worker2_startedAt = results[4];
-
+        cb => test_server.onWorkerListening(proc, () => cb(null, Date.now())),
+      ], (err, [, worker1_startedAt, , worker2_startedAt]) => {
         assert.closeTo(worker1_startedAt, testStartedAt + restartDelay, 100, `+${worker1_startedAt - testStartedAt}ms delay on worker1`);
         assert.closeTo(worker2_startedAt, worker1_startedAt + restartDelay, 100, `+${worker2_startedAt - worker1_startedAt}ms delay on worker2`);
         done();

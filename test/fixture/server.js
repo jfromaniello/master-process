@@ -7,6 +7,25 @@ if (cluster.isMaster) {
 
 const http = require('http');
 
+function sendEvent(name, payload) {
+  console.log(`event:>>${JSON.stringify({
+    name: name,
+    payload: Object.assign({}, payload, {
+      pid: process.pid
+    })
+  })}`);
+}
+
+function exitWorker() {
+  server.close();
+  setTimeout(() => {
+    // simulate some cleanup that has to happen before exiting
+    sendEvent('clean_up');
+    process.exit(0);
+  });
+}
+
+sendEvent('starting');
 const server = http.createServer(function (req, res) {
   if (req.url === '/exit') {
     console.log('exiting...');
@@ -51,11 +70,7 @@ server.listen(9898, function (err) {
     console.error(err);
     return process.exit(1);
   }
-  console.log('listening');
-  process.send({ listening: true });
+  sendEvent('listening');
 });
 
-process.once('SIGTERM', function () {
-  server.close();
-  process.exit(0);
-});
+process.on('SIGTERM', exitWorker);

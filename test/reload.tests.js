@@ -1,4 +1,4 @@
-const assert  = require('chai').assert;
+const assert = require('chai').assert;
 const test_server = require('./fixture/test_server');
 
 describe('cluster reload', function () {
@@ -17,8 +17,8 @@ describe('cluster reload', function () {
     let envs;
 
     beforeEach(function(done) {
-      test_server.awaitWorkerOnline(proc, () => {
-        test_server.getWorkerProcess((err, body) => {
+      test_server.onWorkerListening(proc, () => {
+        test_server.getWorkerProcessEnv((err, body) => {
           if (err) { return done(err); }
           envs = body.env;
           done();
@@ -36,6 +36,14 @@ describe('cluster reload', function () {
 
     it('worker env should contain PPID', function() {
       assert.equal(envs.PPID, proc.pid);
+    });
+  });
+
+  describe('when the cluster receives a SIGHUP', function () {
+    it('should wait for workers to clean up', function (done) {
+      proc.once('clean_up', () => {
+        done();
+      }).kill('SIGTERM');
     });
   });
 

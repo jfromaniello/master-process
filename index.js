@@ -54,6 +54,7 @@ function fork (worker_index, reload_counter, callback) {
   new_worker._reload_counter = reload_counter;
   new_worker._worker_index = worker_index;
   new_worker._worker_started = Date.now();
+  new_worker._worker_terminated = false;
 
   monitor(new_worker, debug, fork);
 
@@ -67,7 +68,8 @@ function fork (worker_index, reload_counter, callback) {
     .forEach(function (old_worker) {
       var old_proc = old_worker.process;
       debug('PID/%s: killing old worker ', old_proc.pid);
-      old_worker.kill('SIGTERM');
+      old_worker._worker_terminated = true;
+      old_proc.kill('SIGTERM');
     });
 
     if (callback) {
@@ -100,8 +102,12 @@ module.exports.init = function () {
       debug('SIGTERM: stopping all workers');
 
       async.each(_.values(cluster.workers), function (worker, callback) {
-        worker.process.once('exit', callback);
-        worker.kill('SIGTERM');
+        worker._worker_terminated = true;
+        worker.process
+              .once('exit', function () {
+                callback();
+              })
+              .kill('SIGTERM');
       }, function () {
         unix_sockets.forEach(function (socket) {
           debug('SIGTERM: cleaning socket ' + socket);
@@ -131,15 +137,12 @@ module.exports.init = function () {
   }).on('exit', function (worker, code, signal) {
     const pid = worker.process.pid;
 
-    if (worker.exitedAfterDisconnect) {
-      // master-process will use Worker.kill to gracefully kill a worker,
-      // which causes worker.exitedAfterDisconnect to be set (since Node v6).
-      //
+    if (worker._worker_terminated) {
       // this is used here to distinguish expected/unexpected worker deaths.
       if (code === 0) {
-        debug('PID/%s: disconnected worker has exited', pid);
+        debug('PID/%s: terminated worker has exited', pid);
       } else {
-        debug('PID/%s: disconnected worker has crashed: %o', pid, { code, signal });
+        debug('PID/%s: terminated worker has crashed: %o', pid, { code, signal });
       }
     } else {
       const uptime = Date.now() - worker._worker_started;
