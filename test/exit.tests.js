@@ -37,26 +37,17 @@ describe('cluster exit', function () {
 
   describe('when a worker exits', function () {
     [
-      ['with exit code==0', 'http://localhost:9898/exit'],
-      ['with exit code!==0', 'http://localhost:9898/crash'],
-      ['due to a SIGTERM', 'http://localhost:9898/sigterm'],
-      ['due to a SIGKILL', 'http://localhost:9898/sigkill'],
-    ].forEach(([desc, crashURL]) => {
-
-      const crashWorker = cb => request.get(crashURL, () => cb(null));
-
+      ['with exit code==0', () => request.get('http://localhost:9898/exit', noop)],
+      ['with exit code!==0', () => request.get('http://localhost:9898/crash', noop)],
+      ['due to a SIGTERM', () => process.kill(worker_pid, 'SIGTERM')],
+      ['due to a SIGKILL', () => process.kill(worker_pid, 'SIGKILL')],
+    ].forEach(([desc, crashWorker]) => {
       describe(desc, function () {
         it('should be replaced with a new worker', function (done) {
-          async.series([
-            crashWorker,
-            cb => test_server.onWorkerListening(proc, worker => cb(null, worker.pid)),
-          ], (err, [, new_worker_pid]) => {
-            if (err) {
-              return done(err);
-            }
-
-            assert.isNumber(new_worker_pid);
-            assert.notEqual(new_worker_pid, worker_pid, 'request should be serviced by new pid');
+          crashWorker();
+          test_server.onWorkerListening(proc, new_worker => {
+            assert.isNumber(new_worker.pid);
+            assert.notEqual(new_worker.pid, worker_pid, 'request should be serviced by new pid');
             done();
           });
         });
@@ -82,3 +73,6 @@ describe('cluster exit', function () {
   });
 
 });
+
+function noop() {
+}

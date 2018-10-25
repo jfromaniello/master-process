@@ -37,16 +37,6 @@ const server = http.createServer(function (req, res) {
     return process.exit(1);
   }
 
-  if (req.url === '/sigterm') {
-    console.error('sending SIGTERM to self');
-    return process.kill(process.pid, 'SIGTERM');
-  }
-
-  if (req.url === '/sigkill') {
-    console.error('sending SIGKILL to self');
-    return process.kill(process.pid, 'SIGKILL');
-  }
-
   if (req.url === '/hardcrash') {
     const root = [];
     while (true) root.push(new Array(100000));
