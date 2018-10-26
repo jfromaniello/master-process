@@ -57,9 +57,20 @@ The number of workers can be controlled with the WORKERS environment variable. T
 ### Application Crashes
 
 If a worker exits unexpectedly, master-process will attempt to replace it with a new 
-worker. To avoid avoid excessive resource usage in case newly-started workers keep crashing
-there is a `RESTART_DELAY` property (default: '1s') that is used to throttle how often a
-given worker is restarted.
+worker. Similarly if the worker crashes or is killed by the operating system it will
+also be replaced.
+
+To avoid avoid excessive resource usage in case newly-started workers keep crashing
+there is a `WORKER_THROTTLE` environment variable that is used to throttle how often 
+a given worker is restarted:
+
+* if a worker has been running for less than `WORKER_THROTTLE` when it crashes there
+  will be a delay before a replacement worker is created. 
+
+* if a worker has been running for longer than `WORKER_THROTTLE` then the replacement 
+  worker is started immediately. 
+
+The default value is `WORKER_THROTTLE=1s`.
 
 ### Updating master-process
 

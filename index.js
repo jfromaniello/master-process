@@ -14,7 +14,7 @@ var DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
                         os.cpus().length :
                         parseInt(process.env.WORKERS || 1) || 1;
 
-const RESTART_DELAY = typeof process.env.RESTART_DELAY === 'string' ? ms(process.env.RESTART_DELAY) : ms('1s');
+const WORKER_THROTTLE = typeof process.env.WORKER_THROTTLE === 'string' ? ms(process.env.WORKER_THROTTLE) : ms('1 second');
 
 function getVersion () {
   var pkg = fs.readFileSync(path.join(__dirname, '/package.json'), 'utf8');
@@ -81,7 +81,7 @@ function fork (worker_index, reload_counter, callback) {
 }
 
 module.exports.init = function () {
-  debug('starting master-process %s with pid %s and config: %o', version, process.pid, { DESIRED_WORKERS, RESTART_DELAY });
+  debug('starting master-process %s with pid %s and config: %o', version, process.pid, { DESIRED_WORKERS, WORKER_THROTTLE });
   var reload_counter = 0;
 
   if (process.env.PORT && process.env.PORT[0] === '/' && fs.existsSync(process.env.PORT)) {
@@ -146,7 +146,7 @@ module.exports.init = function () {
       }
     } else {
       const uptime = Date.now() - worker._worker_started;
-      const restartDelay = Math.max(0, RESTART_DELAY - uptime);
+      const restartDelay = Math.max(0, WORKER_THROTTLE - uptime);
 
       debug('PID/%s: worker has crashed: %o', pid, { code, signal, uptime, restartDelay });
       setTimeout(() => {
