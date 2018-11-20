@@ -7,20 +7,48 @@ if (cluster.isMaster) {
 
 const http = require('http');
 
-const server = http.createServer(function(req, res) {
+function sendEvent(name, payload) {
+  console.log(`event:>>${JSON.stringify({
+    name: name,
+    payload: Object.assign({}, payload, {
+      pid: process.pid
+    })
+  })}`);
+}
+
+function exitWorker() {
+  server.close();
+  setTimeout(() => {
+    // simulate some cleanup that has to happen before exiting
+    sendEvent('clean_up');
+    process.exit(0);
+  });
+}
+
+sendEvent('starting');
+const server = http.createServer(function (req, res) {
+  if (req.url === '/exit') {
+    console.log('exiting...');
+    return process.exit(0);
+  }
+
   if (req.url === '/crash') {
+    console.error('crashing...');
     return process.exit(1);
   }
 
   if (req.url === '/hardcrash') {
     const root = [];
-    while(true) root.push(new Array(100000));
+    while (true) root.push(new Array(100000));
   }
 
-  if (req.url === '/envs') {
+  if (req.url === '/process') {
     res.setHeader('Content-Type', 'application/json');
     res.writeHead(200);
-    return res.end(JSON.stringify(process.env));
+    return res.end(JSON.stringify({
+      pid: process.pid,
+      env: process.env,
+    }));
   }
 
   res.writeHead(200);
@@ -32,11 +60,7 @@ server.listen(9898, function (err) {
     console.error(err);
     return process.exit(1);
   }
-  console.log('listening');
-  process.send({ listening: true });
+  sendEvent('listening');
 });
 
-process.once('SIGTERM', function () {
-  server.close();
-  process.exit(0);
-});
+process.on('SIGTERM', exitWorker);

@@ -1,27 +1,26 @@
 {
   "name": "master-process",
   "description": "Reload your application with no downtime.",
-  "version": "2.6.0",
+  "version": "3.0.0",
   "author": "José F. Romaniello <jfromaniello@gmail.com> (http://joseoncode.com)",
   "repository": {
     "url": "git://github.com/jfromaniello/master-process.git"
   },
   "main": "index.js",
+  "license": "MIT",
   "scripts": {
-    "test": "mocha --timeout 10000"
+    "test": "mocha"
   },
   "dependencies": {
-    "async": "~1.4.2",
-    "bytes": "^2.2.0",
-    "debug": "~2.2.0",
-    "keypress": "~0.2.1",
-    "lodash": "~3.10.1",
-    "ms": "~0.7.1",
+    "async": "^1.5.2",
+    "bytes": "^3.0.0",
+    "debug": "^3.2.6",
+    "ms": "^2.1.1",
     "usage": "~0.7.1"
   },
   "devDependencies": {
-    "chai": "~2.3.0",
-    "mocha": "~2.2.5",
-    "request": "~2.64.0"
+    "chai": "^4.2.0",
+    "mocha": "^5.2.0",
+    "request": "^2.88.0"
   }
 }
