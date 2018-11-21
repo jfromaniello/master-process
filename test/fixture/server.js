@@ -1,4 +1,5 @@
 const cluster = require('cluster');
+const ms = require('ms');
 
 if (cluster.isMaster) {
   const mp = require('../../');
@@ -22,7 +23,7 @@ function exitWorker() {
     // simulate some cleanup that has to happen before exiting
     sendEvent('clean_up');
     process.exit(0);
-  });
+  }, ms(process.env.WORKER_EXIT_DELAY || 0));
 }
 
 sendEvent('starting');
