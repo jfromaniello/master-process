@@ -7,6 +7,7 @@ var monitor = require('./lib/monitor');
 var debug   = require('debug')('master-process');
 var os      = require('os');
 const ms    = require('ms');
+const proc_util = require('./lib/proc_util');
 
 var cwd     = process.cwd();
 
@@ -68,8 +69,7 @@ function fork (worker_index, reload_counter, callback) {
     .forEach(function (old_worker) {
       var old_proc = old_worker.process;
       debug('PID/%s: killing old worker ', old_proc.pid);
-      old_worker._worker_terminated = true;
-      old_proc.kill('SIGTERM');
+      proc_util.terminate(old_worker);
     });
 
     if (callback) {
@@ -102,12 +102,8 @@ module.exports.init = function () {
       debug('SIGTERM: stopping all workers');
 
       async.each(_.values(cluster.workers), function (worker, callback) {
-        worker._worker_terminated = true;
-        worker.process
-              .once('exit', function () {
-                callback();
-              })
-              .kill('SIGTERM');
+        worker.process.once('exit', callback);
+        proc_util.terminate(worker);
       }, function () {
         unix_sockets.forEach(function (socket) {
           debug('SIGTERM: cleaning socket ' + socket);

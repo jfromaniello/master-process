@@ -4,11 +4,20 @@ const request = require('request');
 /**
  * Creates a new master-process cluster for use in tests.
  *
+ * @param {object} [env={}] environment variables to be passed to the server
  * @param {function} cb invoked once the cluster is online
  * @return {ChildProcess} the master process of the cluster
  */
-function createCluster(cb) {
-  const proc = spawn(process.execPath, [__dirname + '/server.js']);
+function createCluster(env, cb) {
+  if (typeof env === 'function') {
+    cb = env;
+    env = {};
+  }
+
+  const proc = spawn(process.execPath, [__dirname + '/server.js'], { env: Object.assign({
+      WORKER_THROTTLE: '0ms', // don't throttle during test execution
+    }, env)
+  });
 
   // //Useful to debug a test
   // proc.stdout.pipe(process.stdout);
