@@ -39,7 +39,9 @@ const server = http.createServer(function (req, res) {
   }
 
   if (req.url === '/hardcrash') {
+    // noinspection JSMismatchedCollectionQueryUpdate
     const root = [];
+    // noinspection InfiniteLoopJS
     while (true) root.push(new Array(100000));
   }
 
@@ -56,7 +58,7 @@ const server = http.createServer(function (req, res) {
   res.end(process.env.RELOAD_INDEX);
 });
 
-server.listen(9898, function (err) {
+server.listen(process.env.PORT || 9898, function (err) {
   if (err) {
     console.error(err);
     return process.exit(1);
