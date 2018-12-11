@@ -4,6 +4,12 @@ Read more [here](http://joseoncode.com/2015/01/18/reloading-node-with-no-downtim
 
 [![Build Status](https://travis-ci.org/jfromaniello/master-process.svg)](https://travis-ci.org/jfromaniello/master-process)
 
+## Compatibility
+
+- Node 6.x
+- Node 8.x
+- Node 10.x
+
 ## Installation
 
 ```
@@ -24,29 +30,53 @@ if (cluster.isMaster &&                      //if is a master
     !isDebugMode() &&                        //not in debug mode
     process.env.NODE_ENV !== 'test') {       //not in test mode
 
-  var mp = require('master-process');
-  mp.init();
+  require('master-process').init();
   return;
 }
 ```
 
 ## How it works
 
-The application itself is run as a worker process.
+The master-process module uses the [cluster module](https://nodejs.org/api/cluster.html) to run the
+user application in cluster mode. There are two types of processes involved in a Node cluster:
+- master process,
+- worker processes. 
 
-The master process handles the special `SIGHUP` signal to create a new worker and once the new worker is listening it closes the old one.
+The worker processes are used to run your application. All worker processes in a cluster will serve
+requests on a single server port or UNIX domain socket (see cluster documentation for how this is 
+achieved).
 
-Use this signal to tell the master process that you have updated the application and it should reload it.
+The master process handles forking the required number of workers as well as:
+
+- handling the `SIGHUP` signal on the master process to reload the cluster (new workers are created 
+  and old workers are destroyed once the new ones are ready to service requests). Use this signal 
+  to tell the master process that you have updated the application and it should reload it.
+  
+- handling the `SIGTERM` signal to cleanly shut down all workers and exit the cluster.
 
 ### Number of workers
 
 The number of workers can be controlled with the WORKERS environment variable. The default is `1`.
 
-`WORKERS=AUTO` sets the number of workers equals to the number of cores.
+`WORKERS=AUTO` sets the number of workers equals to the number of cores (as returned by `os.cpus().length`)
 
 ### Application Crashes
 
-The master-process does not handle application crashes and restarts. Once a worker crash the master process itself will crash, the service manager should take care of restarting the application.
+If a worker exits unexpectedly, master-process will attempt to replace it with a new 
+worker. Similarly if the worker crashes or is killed by the operating system it will
+also be replaced.
+
+To avoid avoid excessive resource usage in case newly-started workers keep crashing
+there is a `WORKER_THROTTLE` environment variable that is used to throttle how often 
+a given worker is restarted:
+
+* if a worker has been running for less than `WORKER_THROTTLE` when it crashes there
+  will be a delay before a replacement worker is created. 
+
+* if a worker has been running for longer than `WORKER_THROTTLE` then the replacement 
+  worker is started immediately. 
+
+The default value is `WORKER_THROTTLE=1s`.
 
 ### Updating master-process
 
