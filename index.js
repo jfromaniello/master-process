@@ -80,6 +80,14 @@ function fork (worker_index, reload_counter, callback) {
   return new_worker;
 }
 
+function ensurePermsAsync(path, perms) {
+  fs.chmod(path, perms, err => {
+    if (err) {
+      debug('Error setting permissions on %s', path, err);
+    }
+  });
+}
+
 module.exports.init = function () {
   debug('starting master-process %s with pid %s and config: %o', version, process.pid, { DESIRED_WORKERS, WORKER_THROTTLE });
   var reload_counter = 0;
@@ -88,7 +96,7 @@ module.exports.init = function () {
     fs.unlinkSync(process.env.PORT);
   }
 
-  var unix_sockets = [];
+  const unix_sockets = new Set();
 
   process
     .on('SIGHUP', function () {
@@ -123,12 +131,15 @@ module.exports.init = function () {
     });
 
   cluster.once('listening', function (worker, address) {
-    debug('cluster is listening on %s', address.port || address.fd);
-    if (address.address &&
-        address.address[0] === '/' &&
-        unix_sockets.indexOf(address.address) === -1) {
-      unix_sockets.push(address.address);
-      fs.chmodSync(address.address, '664');
+    debug('cluster is listening on %s', address.port || address.address);
+  }).on('listening', function (worker, address) {
+    if (address.addressType === -1) { // https://nodejs.org/api/cluster.html#cluster_event_listening_1
+      unix_sockets.add(address.address);
+
+      // due to https://github.com/nodejs/node/issues/19729 the underlying path may have
+      // been unlinked after this cluster has started. ensure that the permissions are
+      // correct whenever a new worker has bound to a UNIX socket.
+      ensurePermsAsync(address.address, '664');
     }
   }).on('exit', function (worker, code, signal) {
     const pid = worker.process.pid;
