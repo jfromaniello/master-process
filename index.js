@@ -64,7 +64,7 @@ function fork (worker_index, reload_counter, callback) {
 
     _.values(cluster.workers)
     .filter(function (worker) {
-      return worker._reload_counter !== reload_counter;
+      return worker._reload_counter < reload_counter;
     })
     .forEach(function (old_worker) {
       var old_proc = old_worker.process;
