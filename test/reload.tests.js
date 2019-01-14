@@ -92,7 +92,7 @@ describe('cluster reload', function () {
 
         async.parallel([
           cb => test_server.onWorkerListening(proc, newWorker => test_server.onWorkerListening(proc, finalWorker => cb(null, [newWorker, finalWorker]))),
-          cb => async.retry({ times: 9, interval: testTimeout / 10 }, isWorkerDead, cb),
+          cb => async.retry({ times: 20, interval: 200 }, isWorkerDead, cb),
           cb => cb(null, proc.kill('SIGHUP')),
           cb => cb(null, proc.kill('SIGHUP')), // <= trigger cluster reload multiple times
         ], (err, [ [{ pid: newWorkerPid }, { pid: finalWorkerPid }] ]) => {
@@ -119,6 +119,71 @@ describe('cluster reload', function () {
       });
     });
 
+    const sameIndexWorkerShouldBeRemoved = () => it('should remove only the worker it replaces', function (done) {
+      test_server.getWorkerProcessEnv((err, worker1) => {
+        if (err) {
+          return done(err);
+        }
+
+        let worker2;
+
+        async.doUntil(
+          cb => test_server.getWorkerProcessEnv((err, worker) => {worker2 = worker;  cb(err);}),
+          () => worker1.env.WORKER_INDEX !== worker2.env.WORKER_INDEX,
+          err => {
+            if (err) {
+              return done(err);
+            }
+            const workers = [];
+            workers[worker1.env.WORKER_INDEX] = worker1;
+            workers[worker2.env.WORKER_INDEX] = worker2;
+
+            async.parallel([
+              waitNewWorker,
+              cb => async.retry({ times: 9, interval: 200 }, isWorkerDead(workers[0]), cb),
+              cb => cb(null, proc.kill('SIGHUP'))
+              ], (err, [ newWorker1 ]) => {
+              assert.isNull(err);
+              assert.ok(newWorker1);
+              assert.ok(isRunning(workers[1].pid)); // the other old process is still running
+
+              async.parallel([
+                waitNewWorker,
+                cb => async.retry({ times: 9, interval: 200 }, isWorkerDead(workers[1]), cb),
+                ], (err, [ newWorker2 ]) => {
+                assert.isNull(err);
+                assert.ok(newWorker2);
+                assert.notEqual(newWorker1.pid, workers[0].pid);
+                assert.notEqual(newWorker2.pid, workers[0].pid);
+                assert.notEqual(newWorker1.pid, workers[1].pid);
+                assert.notEqual(newWorker2.pid, workers[1].pid);
+                done();
+              });
+            });
+
+            function  waitNewWorker(cb) {
+              test_server.onWorkerListening(proc, newWorker => {
+                if (workers.every(w => w.pid !== newWorker.pid)) {
+                  cb(null, newWorker);
+                } else {
+                  waitNewWorker(cb);
+                }
+              });
+            }
+
+            function isWorkerDead(worker) {
+              return function(cb) {
+                if (isRunning(worker.pid)) {
+                  cb(Error('worker still alive: ' + worker.pid));
+                } else {
+                  cb(null);
+                }
+              };
+            }
+        });
+      });
+    });
+
     describe('when the worker exits', function () {
       setUpCluster();
 
@@ -126,10 +191,16 @@ describe('cluster reload', function () {
       workerShouldBeReplaced();
     });
 
-    describe('when there are multiple reloads', function () {
+    describe('when there are multiple reloads each worker', function () {
       setUpCluster();
 
       olderWorkersShouldBeReplaced();
+    });
+
+    describe('when there are multiple workers each worker', function () {
+      setUpCluster({ WORKERS: 2, DELAY_LISTEN: 500 });
+
+      sameIndexWorkerShouldBeRemoved();
     });
 
     describe('when the worker refuses to exit', function () {

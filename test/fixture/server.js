@@ -58,12 +58,20 @@ const server = http.createServer(function (req, res) {
   res.end(process.env.RELOAD_INDEX);
 });
 
-server.listen(process.env.PORT || 9898, function (err) {
-  if (err) {
-    console.error(err);
-    return process.exit(1);
-  }
-  sendEvent('listening');
-});
+function listen() {
+  sendEvent('listen');
+  server.listen(process.env.PORT || 9898, function (err) {
+    if (err) {
+      console.error(err);
+      return process.exit(1);
+    }
+    sendEvent('listening');
+  });
+}
 
+if (process.RELOAD_INDEX != 0 && process.env.DELAY_LISTEN) {
+  setTimeout(listen, parseFloat(process.env.WORKER_INDEX) * parseFloat(process.env.DELAY_LISTEN));
+} else {
+  listen();
+}
 process.on('SIGTERM', exitWorker);
