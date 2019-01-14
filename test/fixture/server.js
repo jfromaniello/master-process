@@ -3,6 +3,7 @@ const ms = require('ms');
 
 if (cluster.isMaster) {
   const mp = require('../../');
+  process.on('SIGHUP', () => sendEvent('reload'));
   return mp.init();
 }
 

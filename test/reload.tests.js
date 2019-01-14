@@ -90,21 +90,22 @@ describe('cluster reload', function () {
           return done(err);
         }
 
+        const workers = [];
+        proc.on('listening', worker => workers.push(worker));
+        proc.once('reload', ()=> proc.kill('SIGHUP'));
+        proc.kill('SIGHUP');
+
         async.parallel([
-          cb => test_server.onWorkerListening(proc, newWorker => test_server.onWorkerListening(proc, finalWorker => cb(null, [newWorker, finalWorker]))),
-          cb => async.retry({ times: 20, interval: 200 }, isWorkerDead, cb),
-          cb => cb(null, proc.kill('SIGHUP')),
-          cb => cb(null, proc.kill('SIGHUP')), // <= trigger cluster reload multiple times
-        ], (err, [ [{ pid: newWorkerPid }, { pid: finalWorkerPid }] ]) => {
+          cb => async.retry({ times: 9, interval: testTimeout / 10 }, callback => (workers.length === 2) ? callback() : callback(new Error('Waiting for workers')) , cb),
+          cb => async.retry({ times: 9, interval: testTimeout / 10 }, isWorkerDead, cb),
+        ], (err) => {
           assert.isNull(err);
-          assert.isNumber(newWorkerPid);
-          assert.isNumber(finalWorkerPid);
-          assert.notEqual(newWorkerPid, oldWorkerPid);
-          assert.notEqual(finalWorkerPid, oldWorkerPid);
-          if (isRunning(newWorkerPid)) { // only one worker should be running
-            assert.ok(!isRunning(finalWorkerPid));
+          assert.isNumber(workers[0].pid);
+          assert.isNumber(workers[1].pid);
+          if (isRunning(workers[0].pid)) { // only one worker should be running
+            assert.ok(!isRunning(workers[1].pid));
           } else {
-            assert.ok(isRunning(finalWorkerPid));
+            assert.ok(isRunning(workers[1].pid));
           }
           done();
         });
@@ -184,17 +185,17 @@ describe('cluster reload', function () {
       });
     });
 
+    describe('when there are multiple reloads each worker', function () {
+      setUpCluster();
+
+      olderWorkersShouldBeReplaced();
+    });
+
     describe('when the worker exits', function () {
       setUpCluster();
 
       workerCanCleanUp();
       workerShouldBeReplaced();
-    });
-
-    describe('when there are multiple reloads each worker', function () {
-      setUpCluster();
-
-      olderWorkersShouldBeReplaced();
     });
 
     describe('when there are multiple workers each worker', function () {
