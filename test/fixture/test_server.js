@@ -25,13 +25,14 @@ function createCluster(env, cb) {
 
   proc.stdout.on('data', function (data) {
     const marker = 'event:>>';
-    const text = data.toString();
-
-    if (text.indexOf(marker) === 0) {
-      const json = text.substr(marker.length);
-      const { name, payload } = JSON.parse(json);
-      setTimeout(() => proc.emit(name, payload), 50);
-    }
+    const texts = data.toString().split('\n');;
+    texts.forEach(text => {
+      if (text.indexOf(marker) === 0) {
+        const json = text.substr(marker.length);
+        const { name, payload } = JSON.parse(json);
+        setTimeout(() => proc.emit(name, payload), 50);
+      }
+    });
   });
 
   proc.once('exit', function () {
