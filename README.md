@@ -50,9 +50,10 @@ The master process handles forking the required number of workers as well as:
 
 ### Number of workers
 
-The number of workers can be controlled with the WORKERS environment variable. The default is `1`.
+The number of workers can be controlled with the `WORKERS` environment variable. The default is `1`.
 
-`WORKERS=AUTO` sets the number of workers equals to the number of cores (as returned by `os.cpus().length`)
+`WORKERS=MAX` sets the number of workers equals to the `number of cores` (as returned by `os.cpus().length`)
+`WORKERS=AUTO` sets the number of workers equals to the `number of cores - 1` (or a single worker if single core)
 
 ### Application Crashes
 
@@ -79,6 +80,14 @@ If the master process detects that the version of the `master-process` module ha
 ### CPU and Memory monitoring
 
 The master process watch by default the behavior of the worker. If the process is taking too much resources it will load a new worker.
+Here are the environment variables that can be used to control the process monitoring and their respective defaults:
+
+```
+MEM_MONITOR_FAILURES=10
+CPU_MONITOR_FAILURE=10
+MAX_MEMORY_ALLOWED_MB=1200
+MAX_CPU_ALLOWED=95
+```
 
 ### SIGUSR2
 

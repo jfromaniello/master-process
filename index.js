@@ -11,9 +11,17 @@ const proc_util = require('./lib/proc_util');
 
 var cwd     = process.cwd();
 
-var DESIRED_WORKERS = process.env.WORKERS === 'AUTO' ?
-                        os.cpus().length :
-                        parseInt(process.env.WORKERS || 1) || 1;
+var maxCpus = os.cpus().length;
+var autoCpus = maxCpus > 1 ? maxCpus - 1 : 1;
+
+var DESIRED_WORKERS;
+if (process.env.WORKERS === 'MAX') {
+  DESIRED_WORKERS = maxCpus;
+} else if (process.env.WORKERS === 'AUTO') {
+  DESIRED_WORKERS = autoCpus;
+} else {
+  DESIRED_WORKERS = parseInt(process.env.WORKERS || 1, 10) || 1;
+}
 
 const WORKER_THROTTLE = typeof process.env.WORKER_THROTTLE === 'string' ? ms(process.env.WORKER_THROTTLE) : ms('1 second');
 
