@@ -16,7 +16,7 @@
     "bytes": "^3.0.0",
     "debug": "^3.2.6",
     "ms": "^2.1.1",
-    "usage": "~0.7.1"
+    "pidusage": "^2.0.21"
   },
   "devDependencies": {
     "chai": "^4.2.0",
