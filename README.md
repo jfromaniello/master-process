@@ -9,6 +9,8 @@ Read more [here](http://joseoncode.com/2015/01/18/reloading-node-with-no-downtim
 - Node 6.x
 - Node 8.x
 - Node 10.x
+- Node 12.x
+- Node 14.x
 
 ## Installation
 

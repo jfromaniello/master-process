@@ -1,5 +1,10 @@
 # Changelog
 
+<a name="v4.1.0"></a>
+ # v4.1.0
+### Feature
+* Add support for Node 12.x and 14.x
+
 <a name="v4.0.0"></a>
  # v4.0.0
 ### Feature
