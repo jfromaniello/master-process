@@ -7,6 +7,7 @@
     "url": "git://github.com/jfromaniello/master-process.git"
   },
   "main": "index.js",
+  "types": "index.d.ts",
   "license": "MIT",
   "scripts": {
     "test": "mocha"
