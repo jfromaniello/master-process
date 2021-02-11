@@ -1,5 +1,10 @@
 # Changelog
 
+<a name="v4.2.0"></a>
+ # v4.2.0
+### Feature
+* Add Typescript definition
+
 <a name="v4.1.0"></a>
  # v4.1.0
 ### Feature
