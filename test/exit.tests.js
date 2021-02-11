@@ -12,10 +12,10 @@ describe('cluster exit', function () {
   let proc;
   let worker_pid;
 
-  function setUpCluster(env) {
+  function setUpCluster(env, options) {
     beforeEach(function (done) {
-      proc = test_server.createCluster(env, (err, worker) => {
-        worker_pid = worker.pid;
+      proc = test_server.createCluster(env, options, (err, worker) => {
+        worker_pid = worker && worker.pid;
         done(err);
       });
     });
@@ -51,7 +51,7 @@ describe('cluster exit', function () {
     });
   });
 
-  describe('when a worker exits', function () {
+  describe('when a worker exits once', function () {
     [
       ['with exit code==0', () => request.get('http://localhost:9898/exit', noop)],
       ['with exit code!==0', () => request.get('http://localhost:9898/crash', noop)],
@@ -72,26 +72,84 @@ describe('cluster exit', function () {
       });
     });
 
-    const workerThrottle = 300;
-    describe(`when WORKER_THROTTLE is ${workerThrottle}`, function () {
-      setUpCluster({ WORKER_THROTTLE: String(workerThrottle) });
+    [
+      'constant',
+      undefined,
+    ].forEach((restartStrategy) => {
+      const workerThrottle = 200;
+      describe(`when WORKER_THROTTLE is ${workerThrottle} and RESTART_BACKOFF=${restartStrategy}`, function () {
+        setUpCluster({ WORKER_THROTTLE: String(workerThrottle), RESTART_BACKOFF: restartStrategy });
 
-      it('should be replaced at the rate specified by WORKER_THROTTLE', function (done) {
-        const testStartedAt = Date.now();
+        it('should be replaced at the rate specified by WORKER_THROTTLE', function (done) {
+          const testStartedAt = Date.now();
 
-        async.series([
-          cb => request.get('http://localhost:9898/exit', () => cb(null)),
-          cb => test_server.onWorkerListening(proc, () => cb(null, Date.now())),
-          cb => request.get('http://localhost:9898/crash', () => cb(null)),
-          cb => test_server.onWorkerListening(proc, () => cb(null, Date.now())),
-        ], (err, [, worker1_startedAt, , worker2_startedAt]) => {
-          assert.closeTo(worker1_startedAt, testStartedAt + workerThrottle, 100, `+${worker1_startedAt - testStartedAt}ms delay on worker1`);
-          assert.closeTo(worker2_startedAt, worker1_startedAt + workerThrottle, 100, `+${worker2_startedAt - worker1_startedAt}ms delay on worker2`);
-          done();
+          async.series([
+            cb => request.get('http://localhost:9898/exit', () => cb(null)),
+            cb => test_server.onWorkerListening(proc, () => cb(null, Date.now())),
+            cb => request.get('http://localhost:9898/crash', () => cb(null)),
+            cb => test_server.onWorkerListening(proc, () => cb(null, Date.now())),
+          ], (err, [, worker1_startedAt, , worker2_startedAt]) => {
+            assert.closeTo(worker1_startedAt, testStartedAt + workerThrottle, 100, `+${worker1_startedAt - testStartedAt}ms delay on worker1`);
+            assert.closeTo(worker2_startedAt, worker1_startedAt + workerThrottle, 100, `+${worker2_startedAt - worker1_startedAt}ms delay on worker2`);
+            done();
+          });
         });
       });
     });
+  });
 
+  describe('when a worker crashes repeatedly', function () {
+    const workerThrottle = 200;
+
+    describe(`when RESTART_BACKOFF=constant`, function () {
+      setUpCluster({ WORKER_THROTTLE: String(workerThrottle), RESTART_BACKOFF: 'constant' }, { crashing: true });
+
+      it('should restart at a constant rate', function (done) {
+        let started;
+        let previousStarted;
+        let loopsRemaining = 5;
+
+        async.whilst(function() {
+          return loopsRemaining > 0;
+        }, function(cb) {
+          proc.once('starting', function () {
+            started = Date.now();
+            loopsRemaining--;
+            if (previousStarted) {
+              assert.closeTo(started, previousStarted + workerThrottle, 100, `+${started - previousStarted}ms delay on worker2`);
+            }
+            previousStarted = started;
+            cb();
+          })
+        }, done);
+      });
+    });
+
+    describe(`when RESTART_BACKOFF=undefined (exponential)`, function () {
+      setUpCluster({ WORKER_THROTTLE: String(workerThrottle), RESTART_BACKOFF: undefined }, { crashing: true });
+
+      it('should restart at an exponentially decreasing rate', function (done) {
+        let started;
+        let previousStarted;
+        let loopsRemaining = 5;
+
+        async.whilst(function() {
+          return loopsRemaining > 0;
+        }, function(cb) {
+          proc.once('starting', function () {
+            started = Date.now();
+            loopsRemaining--;
+            if (previousStarted) {
+              const nbOfCrashes = (5 - loopsRemaining - 1); // First restart is not measured.
+              const expectedDelay = workerThrottle * Math.pow(2, (nbOfCrashes - 1));
+              assert.closeTo(started, previousStarted + expectedDelay, 100, `+${started - previousStarted}ms delay on worker2`);
+            }
+            previousStarted = started;
+            cb();
+          })
+        }, done);
+      });
+    });
   });
 
   describe('when binding to a UNIX socket', function () {

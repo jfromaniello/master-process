@@ -32,6 +32,13 @@ function getVersion () {
 
 var version = getVersion();
 
+function getRestartDelay (consecutive_crashes_count) {
+  if (process.env.RESTART_BACKOFF === 'constant') {
+    return WORKER_THROTTLE;
+  }
+  return WORKER_THROTTLE * Math.pow(2, consecutive_crashes_count - 1);
+}
+
 /**
  * Fork a new worker.
  *
@@ -99,6 +106,7 @@ function ensurePermsAsync(path, perms) {
 module.exports.init = function () {
   debug('starting master-process %s with pid %s and config: %o', version, process.pid, { DESIRED_WORKERS, WORKER_THROTTLE });
   var reload_counter = 0;
+  var consecutive_crashes_per_worker = new Array(DESIRED_WORKERS).fill(0);
 
   if (process.env.PORT && process.env.PORT[0] === '/' && fs.existsSync(process.env.PORT)) {
     fs.unlinkSync(process.env.PORT);
@@ -141,6 +149,7 @@ module.exports.init = function () {
   cluster.once('listening', function (worker, address) {
     debug('cluster is listening on %s', address.port || address.address);
   }).on('listening', function (worker, address) {
+    consecutive_crashes_per_worker[worker._worker_index] = 0;
     if (address.addressType === -1) { // https://nodejs.org/api/cluster.html#cluster_event_listening_1
       unix_sockets.add(address.address);
 
@@ -160,12 +169,15 @@ module.exports.init = function () {
         debug('PID/%s: terminated worker has crashed: %o', pid, { code, signal });
       }
     } else {
+      const worker_index = worker._worker_index;
+      consecutive_crashes_per_worker[worker_index]++;
+      let restartDelay = getRestartDelay(consecutive_crashes_per_worker[worker_index]);
       const uptime = Date.now() - worker._worker_started;
-      const restartDelay = Math.max(0, WORKER_THROTTLE - uptime);
+      restartDelay = Math.max(0, restartDelay - uptime);
 
       debug('PID/%s: worker has crashed: %o', pid, { code, signal, uptime, restartDelay });
       setTimeout(() => {
-        fork(worker._worker_index, reload_counter);
+        fork(worker_index, reload_counter);
       }, restartDelay);
     }
   });

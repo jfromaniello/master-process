@@ -5,16 +5,24 @@ const request = require('request');
  * Creates a new master-process cluster for use in tests.
  *
  * @param {object} [env={}] environment variables to be passed to the server
+ * @param {object} [options={}] additional options for the cluster
  * @param {function} cb invoked once the cluster is online
  * @return {ChildProcess} the master process of the cluster
  */
-function createCluster(env, cb) {
+function createCluster(env, options, cb) {
   if (typeof env === 'function') {
     cb = env;
     env = {};
+    options = {};
   }
+  if (typeof options === 'function') {
+    cb = options;
+    options = {};
+  }
+  options = options || {};
 
-  const proc = spawn(process.execPath, [__dirname + '/server.js'], { env: Object.assign({
+  const entrypoint = options.crashing ? '/crashing_server.js' : '/server.js'
+  const proc = spawn(process.execPath, [__dirname + entrypoint], { env: Object.assign({
       WORKER_THROTTLE: '0ms', // don't throttle during test execution
     }, env)
   });
@@ -39,7 +47,11 @@ function createCluster(env, cb) {
     proc.status = 'closed';
   });
 
-  onWorkerListening(proc, worker => cb(null, worker));
+  if (options.crashing) {
+    setImmediate(cb, null);
+  } else {
+    onWorkerListening(proc, worker => cb(null, worker));
+  }
   return proc;
 }
 

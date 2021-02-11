@@ -1,5 +1,10 @@
 # Changelog
 
+<a name="v5.0.0"></a>
+ # v5.0.0
+### Feature
+* Apply exponential backoff on worker restarts after consecutive crashes. Use `RESTART_BACKOFF=constant` to keep old behavior.
+
 <a name="v4.1.0"></a>
  # v4.1.0
 ### Feature
